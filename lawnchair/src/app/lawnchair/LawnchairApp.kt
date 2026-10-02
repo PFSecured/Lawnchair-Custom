@@ -70,7 +70,6 @@ class LawnchairApp : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
-        FirstRunDefaults.applyWallpaper(this)
         QuickStepContract.sRecentsDisabled = !recentsEnabled
         Flowerpot.Manager.getInstance(this)
     }

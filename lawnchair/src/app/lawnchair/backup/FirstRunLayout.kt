@@ -21,11 +21,11 @@ import java.io.File
  * open for this user), so later changes made by the user are kept.
  *
  * Home screen:
+ * - The bottom-right cell holds the custom F-Droid client ([STORE]) and/or Obtainium
+ *   ([UPDATER]): whichever is installed, or an "Updaters" folder if both are.
  * - If every app in [HOME_ORDER] is installed, they are laid out in the original
- *   staircase (5/4/3/2 per row), with the custom F-Droid client ([STORE]) second-to-last
- *   and Obtainium ([UPDATER]) last on the bottom row, each only if installed.
- * - Otherwise the installed ones are packed 5 per row in the same order, followed by
- *   the F-Droid client and then Obtainium.
+ *   staircase (5/4/3/2 per row); otherwise the installed ones are packed 5 per row
+ *   in the same order.
  * - Any other user-installed app (not built-in, dock or hidden) fills the free cells,
  *   alphabetically.
  * Everything goes on the first page; further pages are only created once it is full.
@@ -72,6 +72,7 @@ object FirstRunLayout {
     )
     // Custom F-Droid client.
     private val STORE = listOf("com.pfs.appupdater")
+    private const val UPDATERS_FOLDER_TITLE = "Updaters"
     private val UPDATER = listOf("dev.imranr.obtainium.fdroid", "dev.imranr.obtainium")
 
     /** Number of [HOME_ORDER] apps on each row of the full staircase layout. */
@@ -155,17 +156,26 @@ object FirstRunLayout {
             }
         }
 
+        // Updaters always take the last cell (bottom-right): a folder if both are installed.
+        val lastCell = COLUMNS * ROWS - 1
+        val updaters = listOfNotNull(store, updater)
+        when (updaters.size) {
+            1 -> place(updaters[0], lastCell)
+            2 -> {
+                taken[lastCell] = true
+                insertFolder(db, UPDATERS_FOLDER_TITLE, updaters, serial, lastCell % COLUMNS, lastCell / COLUMNS)
+            }
+        }
+
         if (listed.all { it != null }) {
             var index = 0
             STAIRCASE_ROWS.forEachIndexed { row, count ->
                 repeat(count) { col -> place(listed[index++]!!, row * COLUMNS + col) }
             }
-            store?.let { place(it, COLUMNS * ROWS - 2) }
-            updater?.let { place(it, COLUMNS * ROWS - 1) }
         } else {
-            (listed.filterNotNull() + listOfNotNull(store, updater)).forEachIndexed { cell, app ->
-                if (cell < taken.size) place(app, cell)
-            }
+            // Packed in order, skipping the reserved last cell.
+            val cells = taken.indices.filter { !taken[it] }.iterator()
+            listed.filterNotNull().forEach { app -> if (cells.hasNext()) place(app, cells.next()) }
         }
         // Other apps fill the remaining free cells on the first page; only if that
         // page is full do they continue onto further pages.
