@@ -9,7 +9,6 @@
     <int name="version" value="2" />
     <int name="migration_src_device_type" value="0" />
     <boolean name="pref_hotseatBG" value="false" />
-    <string name="pref_appNameMap">{&quot;dev.imranr.obtainium.fdroid\/dev.imranr.obtainium.MainActivity#10&quot;:&quot;App Updater&quot;}</string>
     <string name="migration_src_workspace_size">5,5</string>
     <boolean name="tint_icon_pack_backgrounds" value="false" />
     <int name="migration_src_hotseat_count" value="5" />
