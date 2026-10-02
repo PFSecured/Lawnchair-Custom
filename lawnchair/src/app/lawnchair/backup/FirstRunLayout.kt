@@ -113,12 +113,13 @@ object FirstRunLayout {
         // One transaction: if anything fails, the stock layout is left untouched.
         db.newTransaction().use { transaction ->
             db.delete(Favorites.TABLE_NAME, null, null)
-            writeLayout(db, visible, ::find, serial)
+            writeLayout(context, db, visible, ::find, serial)
             transaction.commit()
         }
     }
 
     private fun writeLayout(
+        context: Context,
         db: ModelDbController,
         visible: List<LauncherActivityInfo>,
         find: (List<String>) -> LauncherActivityInfo?,
@@ -143,8 +144,14 @@ object FirstRunLayout {
             .filter { it.applicationInfo.flags and SYSTEM_FLAGS == 0 }
             .sortedBy { it.label.toString().lowercase() }
 
-        // Single page only: cells are numbered 0..24 in reading order.
+        // First page cells are numbered 0..24 in reading order.
         val taken = BooleanArray(COLUMNS * ROWS)
+        // With smartspace on, the launcher reserves the first page's top row and would
+        // discard icons there, so keep it free (normally off via the default settings).
+        val topRowReserved = runCatching {
+            PreferenceManager2.getInstance(context).enableSmartspace.firstBlocking()
+        }.getOrDefault(true)
+        if (topRowReserved) (0 until COLUMNS).forEach { taken[it] = true }
         fun place(app: LauncherActivityInfo, cell: Int) {
             taken[cell] = true
             val x = cell % COLUMNS
@@ -167,7 +174,7 @@ object FirstRunLayout {
             }
         }
 
-        if (listed.all { it != null }) {
+        if (listed.all { it != null } && !topRowReserved) {
             var index = 0
             STAIRCASE_ROWS.forEachIndexed { row, count ->
                 repeat(count) { col -> place(listed[index++]!!, row * COLUMNS + col) }
