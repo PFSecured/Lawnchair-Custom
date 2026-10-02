@@ -2,31 +2,19 @@ package app.lawnchair.ui.preferences.about
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
 import com.android.launcher3.BuildConfig
 import com.android.launcher3.R
 import java.io.File
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import retrofit2.create
 
 class AboutViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
 
-    private val api: GitHubService = gitHubApiRetrofit.create()
-
-    private val nightlyBuildsRepository = NightlyBuildsRepository(
-        applicationContext = application,
-        api = api,
-    )
-
     private val _uiState = MutableStateFlow(AboutUiState())
     val uiState = _uiState.asStateFlow()
-    val updateState = nightlyBuildsRepository.updateState
 
     init {
         _uiState.update {
@@ -40,40 +28,13 @@ class AboutViewModel(
             )
         }
 
-        viewModelScope.launch(Dispatchers.Default) {
-            val activeContributors = fetchActiveContributors()
-            val updatedCoreTeam = _uiState.value.coreTeam.map { member ->
-                val status = if (member.githubUsername != null && activeContributors.contains(member.githubUsername.lowercase())) ContributorStatus.Active else ContributorStatus.Idle
-                member.copy(status = status)
-            }
-            _uiState.update { it.copy(coreTeam = updatedCoreTeam) }
-        }
-
-        if (BuildConfig.APPLICATION_ID.contains("nightly")) {
-            nightlyBuildsRepository.checkForUpdate()
-            viewModelScope.launch {
-                nightlyBuildsRepository.updateState.collect { state ->
-                    _uiState.update { it.copy(updateState = state) }
-                }
-            }
-        }
+        // Offline build: no contributor lookup and no update check. The update
+        // section stays UpdateState.Hidden, so nothing is ever downloaded or installed.
     }
 
-    fun downloadUpdate() {
-        nightlyBuildsRepository.downloadUpdate()
-    }
+    fun downloadUpdate() = Unit
 
-    fun installUpdate(file: File) {
-        nightlyBuildsRepository.installUpdate(file)
-    }
-
-    private suspend fun fetchActiveContributors(): Set<String> {
-        return runCatching {
-            nightlyBuildsRepository.api.getRepositoryEvents("LawnchairLauncher", "lawnchair")
-                .map { it.actor.login.lowercase() }
-                .toSet()
-        }.getOrDefault(emptySet())
-    }
+    fun installUpdate(file: File) = Unit
 
     companion object {
         private val team = listOf(
