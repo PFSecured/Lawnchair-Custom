@@ -12,6 +12,7 @@ import com.android.launcher3.model.ModelDbController
 import com.android.launcher3.model.data.AppInfo
 import com.android.launcher3.util.ComponentKey
 import com.patrykmichalik.opto.core.firstBlocking
+import java.io.File
 
 /**
  * Replaces the stock default layout with a fixed dock and every installed app on the
@@ -27,6 +28,7 @@ import com.patrykmichalik.opto.core.firstBlocking
  */
 object FirstRunLayout {
     private const val TAG = "FirstRunLayout"
+    private const val APPLIED_MARKER = "first_run_layout_applied"
 
     private const val COLUMNS = 5
     private const val ROWS = 5
@@ -70,8 +72,13 @@ object FirstRunLayout {
 
     @JvmStatic
     fun apply(context: Context, db: ModelDbController) {
+        // Once per install: a later empty database (e.g. after a grid size change)
+        // must never bring this layout back over the user's own arrangement.
+        val marker = File(context.noBackupFilesDir, APPLIED_MARKER)
+        if (marker.exists()) return
         try {
             applyInternal(context, db)
+            marker.createNewFile()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to apply first-run layout, keeping stock layout", e)
         }
