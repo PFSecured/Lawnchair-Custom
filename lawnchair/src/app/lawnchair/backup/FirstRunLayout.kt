@@ -70,8 +70,8 @@ object FirstRunLayout {
         listOf("net.mullvad.mullvadvpn"),
         listOf("com.standardnotes"),
     )
-    // TODO: package name(s) of the custom F-Droid client.
-    private val STORE = emptyList<String>()
+    // Custom F-Droid client.
+    private val STORE = listOf("com.pfs.appupdater")
     private val UPDATER = listOf("dev.imranr.obtainium.fdroid", "dev.imranr.obtainium")
 
     /** Number of [HOME_ORDER] apps on each row of the full staircase layout. */
