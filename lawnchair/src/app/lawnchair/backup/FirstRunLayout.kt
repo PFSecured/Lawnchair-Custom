@@ -2,6 +2,7 @@ package app.lawnchair.backup
 
 import android.content.ContentValues
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.content.pm.LauncherActivityInfo
 import android.content.pm.LauncherApps
 import android.os.Process
@@ -23,12 +24,14 @@ import java.io.File
  * - If every app in [HOME_ORDER] and [UPDATER] is installed, the apps are laid out in
  *   the original staircase (5/4/3/2 per row) with Obtainium in the bottom-right cell.
  * - Otherwise the installed ones are packed 5 per row in the same order, Obtainium last.
- * - Any other app (except dock apps and hidden apps) fills the free cells, alphabetically.
+ * - Any other user-installed app (not built-in, dock or hidden) fills the free cells,
+ *   alphabetically.
  * Everything goes on the first page; further pages are only created once it is full.
  */
 object FirstRunLayout {
     private const val TAG = "FirstRunLayout"
     private const val APPLIED_MARKER = "first_run_layout_applied"
+    private const val SYSTEM_FLAGS = ApplicationInfo.FLAG_SYSTEM or ApplicationInfo.FLAG_UPDATED_SYSTEM_APP
 
     private const val COLUMNS = 5
     private const val ROWS = 5
@@ -128,8 +131,10 @@ object FirstRunLayout {
         val threemaApps = THREEMA.mapNotNull { pkg -> visible.firstOrNull { it.componentName.packageName == pkg } }
         val used = (listed.filterNotNull() + threemaApps + listOfNotNull(updater) + dockApps)
             .map { it.componentName }.toSet()
+        // Built-in (system) apps stay in the drawer only; just user-installed ones are placed.
         val extras = visible
             .filter { it.componentName !in used }
+            .filter { it.applicationInfo.flags and SYSTEM_FLAGS == 0 }
             .sortedBy { it.label.toString().lowercase() }
 
         // Single page only: cells are numbered 0..24 in reading order.
