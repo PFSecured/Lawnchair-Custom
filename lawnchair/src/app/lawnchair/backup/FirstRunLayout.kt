@@ -79,7 +79,7 @@ object FirstRunLayout {
 
     private fun applyInternal(context: Context, db: ModelDbController) {
         val user = Process.myUserHandle()
-        val launcherApps = context.getSystemService(LauncherApps::class.java)
+        val launcherApps = context.getSystemService(LauncherApps::class.java) ?: return
         val activities = launcherApps.getActivityList(null, user)
             .filter { it.componentName.packageName != context.packageName }
         if (activities.isEmpty()) return
