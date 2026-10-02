@@ -19,9 +19,9 @@ import com.patrykmichalik.opto.core.firstBlocking
  * open for this user), so later changes made by the user are kept.
  *
  * Home screen:
- * - If every app in [HOME_ORDER] and [VANADIUM] is installed, the apps are laid out in
- *   the original staircase (5/4/3/2 per row) with Vanadium in the bottom-right cell.
- * - Otherwise the installed ones are packed 5 per row in the same order, Vanadium last.
+ * - If every app in [HOME_ORDER] and [UPDATER] is installed, the apps are laid out in
+ *   the original staircase (5/4/3/2 per row) with Obtainium in the bottom-right cell.
+ * - Otherwise the installed ones are packed 5 per row in the same order, Obtainium last.
  * - Any other app (except dock apps and hidden apps) follows, alphabetically.
  * Apps start on the second page; the first page stays empty, as in the source setup.
  */
@@ -61,7 +61,7 @@ object FirstRunLayout {
         listOf("net.mullvad.mullvadvpn"),
         listOf("com.standardnotes"),
     )
-    private val VANADIUM = listOf("app.vanadium.browser")
+    private val UPDATER = listOf("dev.imranr.obtainium.fdroid", "dev.imranr.obtainium")
 
     /** Number of [HOME_ORDER] apps on each row of the full staircase layout. */
     private val STAIRCASE_ROWS = listOf(5, 4, 3, 2)
@@ -114,27 +114,27 @@ object FirstRunLayout {
         }
 
         val listed = HOME_ORDER.map { find(it) }
-        val vanadium = find(VANADIUM)
-        val used = (listed.filterNotNull() + listOfNotNull(vanadium) + dockApps)
+        val updater = find(UPDATER)
+        val used = (listed.filterNotNull() + listOfNotNull(updater) + dockApps)
             .map { it.componentName }.toSet()
         val extras = visible
             .filter { it.componentName !in used }
             .sortedBy { it.label.toString().lowercase() }
 
         var slot: Int
-        if (listed.all { it != null } && vanadium != null) {
+        if (listed.all { it != null } && updater != null) {
             var index = 0
             STAIRCASE_ROWS.forEachIndexed { row, count ->
                 repeat(count) { col ->
                     insert(db, listed[index++]!!, serial, Favorites.CONTAINER_DESKTOP, FIRST_SCREEN, col, row)
                 }
             }
-            insert(db, vanadium, serial, Favorites.CONTAINER_DESKTOP, FIRST_SCREEN, COLUMNS - 1, ROWS - 1)
+            insert(db, updater, serial, Favorites.CONTAINER_DESKTOP, FIRST_SCREEN, COLUMNS - 1, ROWS - 1)
             // Keep the staircase page as-is; anything else starts on the next page.
             slot = COLUMNS * ROWS
         } else {
             slot = 0
-            (listed.filterNotNull() + listOfNotNull(vanadium)).forEach { app ->
+            (listed.filterNotNull() + listOfNotNull(updater)).forEach { app ->
                 insertAtSlot(db, app, serial, slot++)
             }
         }
