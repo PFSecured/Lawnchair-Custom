@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import app.lawnchair.backup.FirstRunDefaults
 import app.lawnchair.backup.LawnchairBackup
 import app.lawnchair.flowerpot.Flowerpot
 import app.lawnchair.preferences.PreferenceManager
@@ -61,9 +62,15 @@ class LawnchairApp : Application() {
     internal var accessibilityService: LawnchairAccessibilityService? = null
     val isVibrateOnIconAnimation: Boolean by unsafeLazy { getSystemUiBoolean("config_vibrateOnIconAnimation", false) }
 
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(base)
+        FirstRunDefaults.applySettings(this)
+    }
+
     override fun onCreate() {
         super.onCreate()
         instance = this
+        FirstRunDefaults.applyWallpaper(this)
         QuickStepContract.sRecentsDisabled = !recentsEnabled
         Flowerpot.Manager.getInstance(this)
     }

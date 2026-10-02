@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<map>
+    <int name="launcher.home_bounce_count" value="3" />
+    <boolean name="launcher.apps_view_shown" value="true" />
+    <int name="pref_workspaceRows" value="5" />
+    <boolean name="themed_icons" value="false" />
+    <boolean name="pref_wallpaperScrolling" value="false" />
+    <int name="pref_workspaceColumns" value="5" />
+    <int name="version" value="2" />
+    <int name="migration_src_device_type" value="0" />
+    <boolean name="pref_hotseatBG" value="false" />
+    <string name="pref_appNameMap">{&quot;dev.imranr.obtainium.fdroid\/dev.imranr.obtainium.MainActivity#10&quot;:&quot;App Updater&quot;}</string>
+    <string name="migration_src_workspace_size">5,5</string>
+    <boolean name="tint_icon_pack_backgrounds" value="false" />
+    <int name="migration_src_hotseat_count" value="5" />
+    <string name="migration_src_db_file">launcher_5_5_5.db</string>
+    <int name="pref_hotseatColumns" value="5" />
+    <int name="launcher.all_apps_visited_count" value="20" />
+</map>
