@@ -22,15 +22,15 @@ import com.patrykmichalik.opto.core.firstBlocking
  * - If every app in [HOME_ORDER] and [UPDATER] is installed, the apps are laid out in
  *   the original staircase (5/4/3/2 per row) with Obtainium in the bottom-right cell.
  * - Otherwise the installed ones are packed 5 per row in the same order, Obtainium last.
- * - Any other app (except dock apps and hidden apps) follows, alphabetically.
- * Apps start on the second page; the first page stays empty, as in the source setup.
+ * - Any other app (except dock apps and hidden apps) fills the free cells, alphabetically.
+ * Everything goes on the first page; once it is full, remaining apps stay in the drawer.
  */
 object FirstRunLayout {
     private const val TAG = "FirstRunLayout"
 
     private const val COLUMNS = 5
     private const val ROWS = 5
-    private const val FIRST_SCREEN = 1
+    private const val SCREEN = 0
 
     // Each entry lists accepted package names, preferred first.
     private val DOCK = listOf(
@@ -41,13 +41,15 @@ object FirstRunLayout {
         listOf("com.android.messaging", "com.google.android.apps.messaging"),
     )
 
+    private val THREEMA = listOf("ch.threema.app.libre", "ch.threema.app")
+
     private val HOME_ORDER = listOf(
         // Row 1
-        listOf("ch.threema.app.libre", "ch.threema.app"),
+        THREEMA,
         listOf("im.molly.app"),
         listOf("org.sufficientlysecure.keychain"),
         listOf("io.github.nfdz.cryptool"),
-        listOf("org.thunderdog.challegram", "org.telegram.messenger"),
+        listOf("org.thunderdog.challegram"), // Telegram X only; regular Telegram is an "other" app
         // Row 2
         listOf("chat.simplex.app"),
         listOf("org.briarproject.briar.android"),
@@ -115,44 +117,68 @@ object FirstRunLayout {
 
         val listed = HOME_ORDER.map { find(it) }
         val updater = find(UPDATER)
-        val used = (listed.filterNotNull() + listOfNotNull(updater) + dockApps)
+        // Threema and Threema Libre both installed: they share the first spot in a folder.
+        val threemaApps = THREEMA.mapNotNull { pkg -> visible.firstOrNull { it.componentName.packageName == pkg } }
+        val used = (listed.filterNotNull() + threemaApps + listOfNotNull(updater) + dockApps)
             .map { it.componentName }.toSet()
         val extras = visible
             .filter { it.componentName !in used }
             .sortedBy { it.label.toString().lowercase() }
 
-        var slot: Int
+        // Single page only: cells are numbered 0..24 in reading order.
+        val taken = BooleanArray(COLUMNS * ROWS)
+        fun place(app: LauncherActivityInfo, cell: Int) {
+            taken[cell] = true
+            val x = cell % COLUMNS
+            val y = cell / COLUMNS
+            if (app === listed[0] && threemaApps.size > 1) {
+                insertFolder(db, "Threema", threemaApps, serial, x, y)
+            } else {
+                insert(db, app, serial, Favorites.CONTAINER_DESKTOP, SCREEN, x, y)
+            }
+        }
+
         if (listed.all { it != null } && updater != null) {
             var index = 0
             STAIRCASE_ROWS.forEachIndexed { row, count ->
-                repeat(count) { col ->
-                    insert(db, listed[index++]!!, serial, Favorites.CONTAINER_DESKTOP, FIRST_SCREEN, col, row)
-                }
+                repeat(count) { col -> place(listed[index++]!!, row * COLUMNS + col) }
             }
-            insert(db, updater, serial, Favorites.CONTAINER_DESKTOP, FIRST_SCREEN, COLUMNS - 1, ROWS - 1)
-            // Keep the staircase page as-is; anything else starts on the next page.
-            slot = COLUMNS * ROWS
+            place(updater, COLUMNS * ROWS - 1)
         } else {
-            slot = 0
-            (listed.filterNotNull() + listOfNotNull(updater)).forEach { app ->
-                insertAtSlot(db, app, serial, slot++)
+            (listed.filterNotNull() + listOfNotNull(updater)).forEachIndexed { cell, app ->
+                if (cell < taken.size) place(app, cell)
             }
         }
-        extras.forEach { app -> insertAtSlot(db, app, serial, slot++) }
+        // Other apps fill the remaining free cells; anything that doesn't fit stays
+        // in the app drawer (no extra pages are created).
+        val free = taken.indices.filter { !taken[it] }.iterator()
+        extras.forEach { app -> if (free.hasNext()) place(app, free.next()) }
     }
 
-    private fun insertAtSlot(db: ModelDbController, app: LauncherActivityInfo, serial: Long, slot: Int) {
-        val perPage = COLUMNS * ROWS
-        val inPage = slot % perPage
-        insert(
-            db,
-            app,
-            serial,
-            Favorites.CONTAINER_DESKTOP,
-            screen = FIRST_SCREEN + slot / perPage,
-            x = inPage % COLUMNS,
-            y = inPage / COLUMNS,
-        )
+    private fun insertFolder(
+        db: ModelDbController,
+        title: String,
+        apps: List<LauncherActivityInfo>,
+        serial: Long,
+        x: Int,
+        y: Int,
+    ) {
+        val folderId = db.generateNewItemId()
+        val values = ContentValues().apply {
+            put(Favorites._ID, folderId)
+            put(Favorites.TITLE, title)
+            put(Favorites.ITEM_TYPE, Favorites.ITEM_TYPE_FOLDER)
+            put(Favorites.CONTAINER, Favorites.CONTAINER_DESKTOP)
+            put(Favorites.SCREEN, SCREEN)
+            put(Favorites.CELLX, x)
+            put(Favorites.CELLY, y)
+            put(Favorites.SPANX, 1)
+            put(Favorites.SPANY, 1)
+        }
+        db.insert(Favorites.TABLE_NAME, values)
+        apps.forEachIndexed { rank, app ->
+            insert(db, app, serial, folderId, SCREEN, x = rank, y = 0, rank = rank)
+        }
     }
 
     private fun insert(
@@ -163,9 +189,11 @@ object FirstRunLayout {
         screen: Int,
         x: Int,
         y: Int,
+        rank: Int = 0,
     ) {
         val values = ContentValues().apply {
             put(Favorites._ID, db.generateNewItemId())
+            put(Favorites.RANK, rank)
             put(Favorites.TITLE, app.label.toString())
             put(Favorites.INTENT, AppInfo.makeLaunchIntent(app.componentName).toUri(0))
             put(Favorites.ITEM_TYPE, Favorites.ITEM_TYPE_APPLICATION)
