@@ -89,6 +89,7 @@ import java.io.StringReader;
 
 import app.lawnchair.LawnchairApp;
 import app.lawnchair.LawnchairAppKt;
+import app.lawnchair.backup.FirstRunLayout;
 
 /**
  * Utility class which maintains an instance of Launcher database and provides
@@ -535,6 +536,10 @@ public class ModelDbController {
                     mOpenHelper.createEmptyDB(mOpenHelper.getWritableDatabase());
                     mOpenHelper.loadFavorites(mOpenHelper.getWritableDatabase(),
                             getDefaultLayoutParser(widgetHolder));
+                }
+                if (!(mContext instanceof LauncherPreviewRenderer.PreviewContext)) {
+                    // Lawnchair-Custom: fixed dock and all installed apps on first open.
+                    FirstRunLayout.apply(mContext, this);
                 }
                 clearFlagEmptyDbCreated();
             } finally {
