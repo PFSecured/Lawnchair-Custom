@@ -21,9 +21,11 @@ import java.io.File
  * open for this user), so later changes made by the user are kept.
  *
  * Home screen:
- * - If every app in [HOME_ORDER] and [UPDATER] is installed, the apps are laid out in
- *   the original staircase (5/4/3/2 per row) with Obtainium in the bottom-right cell.
- * - Otherwise the installed ones are packed 5 per row in the same order, Obtainium last.
+ * - If every app in [HOME_ORDER] is installed, they are laid out in the original
+ *   staircase (5/4/3/2 per row), with the custom F-Droid client ([STORE]) second-to-last
+ *   and Obtainium ([UPDATER]) last on the bottom row, each only if installed.
+ * - Otherwise the installed ones are packed 5 per row in the same order, followed by
+ *   the F-Droid client and then Obtainium.
  * - Any other user-installed app (not built-in, dock or hidden) fills the free cells,
  *   alphabetically.
  * Everything goes on the first page; further pages are only created once it is full.
@@ -68,6 +70,8 @@ object FirstRunLayout {
         listOf("net.mullvad.mullvadvpn"),
         listOf("com.standardnotes"),
     )
+    // TODO: package name(s) of the custom F-Droid client.
+    private val STORE = emptyList<String>()
     private val UPDATER = listOf("dev.imranr.obtainium.fdroid", "dev.imranr.obtainium")
 
     /** Number of [HOME_ORDER] apps on each row of the full staircase layout. */
@@ -126,10 +130,11 @@ object FirstRunLayout {
         }
 
         val listed = HOME_ORDER.map { find(it) }
+        val store = find(STORE)
         val updater = find(UPDATER)
         // Threema and Threema Libre both installed: they share the first spot in a folder.
         val threemaApps = THREEMA.mapNotNull { pkg -> visible.firstOrNull { it.componentName.packageName == pkg } }
-        val used = (listed.filterNotNull() + threemaApps + listOfNotNull(updater) + dockApps)
+        val used = (listed.filterNotNull() + threemaApps + listOfNotNull(store, updater) + dockApps)
             .map { it.componentName }.toSet()
         // Built-in (system) apps stay in the drawer only; just user-installed ones are placed.
         val extras = visible
@@ -150,14 +155,15 @@ object FirstRunLayout {
             }
         }
 
-        if (listed.all { it != null } && updater != null) {
+        if (listed.all { it != null }) {
             var index = 0
             STAIRCASE_ROWS.forEachIndexed { row, count ->
                 repeat(count) { col -> place(listed[index++]!!, row * COLUMNS + col) }
             }
-            place(updater, COLUMNS * ROWS - 1)
+            store?.let { place(it, COLUMNS * ROWS - 2) }
+            updater?.let { place(it, COLUMNS * ROWS - 1) }
         } else {
-            (listed.filterNotNull() + listOfNotNull(updater)).forEachIndexed { cell, app ->
+            (listed.filterNotNull() + listOfNotNull(store, updater)).forEachIndexed { cell, app ->
                 if (cell < taken.size) place(app, cell)
             }
         }
