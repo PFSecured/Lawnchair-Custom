@@ -23,7 +23,7 @@ import com.patrykmichalik.opto.core.firstBlocking
  *   the original staircase (5/4/3/2 per row) with Obtainium in the bottom-right cell.
  * - Otherwise the installed ones are packed 5 per row in the same order, Obtainium last.
  * - Any other app (except dock apps and hidden apps) fills the free cells, alphabetically.
- * Everything goes on the first page; once it is full, remaining apps stay in the drawer.
+ * Everything goes on the first page; further pages are only created once it is full.
  */
 object FirstRunLayout {
     private const val TAG = "FirstRunLayout"
@@ -149,10 +149,21 @@ object FirstRunLayout {
                 if (cell < taken.size) place(app, cell)
             }
         }
-        // Other apps fill the remaining free cells; anything that doesn't fit stays
-        // in the app drawer (no extra pages are created).
+        // Other apps fill the remaining free cells on the first page; only if that
+        // page is full do they continue onto further pages.
         val free = taken.indices.filter { !taken[it] }.iterator()
-        extras.forEach { app -> if (free.hasNext()) place(app, free.next()) }
+        var overflow = 0
+        extras.forEach { app ->
+            if (free.hasNext()) {
+                place(app, free.next())
+            } else {
+                val perPage = COLUMNS * ROWS
+                val cell = overflow % perPage
+                val screen = SCREEN + 1 + overflow / perPage
+                insert(db, app, serial, Favorites.CONTAINER_DESKTOP, screen, cell % COLUMNS, cell / COLUMNS)
+                overflow++
+            }
+        }
     }
 
     private fun insertFolder(
